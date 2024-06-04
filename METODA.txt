@@ -1,8 +1,10 @@
 <h1>Предварительная настройка</h1>
-apt install frr
-apt install isc-dhcp-server
-apt install iperf3
-apt install iptables-persistent
+ISP: apt install frr iperf3 chrony -y
+HQ-SRV: apt install iptables iptables-persistent ssh chrony -y
+HQ-R: apt install frr isc-dhcp-server iperf3 chrony -y
+BR-R: apt install frr chrony -y
+BR-SRV: apt install chorny apache2 libapache2-mod-php gnupg
+CLI: apt install chrony -y
 <h1>Модуль 1</h1>
 <h1>Задание 1. Базовая настройка</h1>
 <h1>Настройка BR-R</h1>
@@ -225,13 +227,13 @@ network_admin   ALL=(ALL:ALL) ALL
 Отключить VM Network
 systemctl restart networking
 adduser admin
-network_admin 
+adduser network_admin 
 
 visudo
 #User privilege specification
 root    ALL=(ALL:ALL) allow
 admin    ALL=(ALL:ALL) ALL
-
+network_admin   ALL=(ALL:ALL) ALL 
 <h1>Настройка ISP</h1>
 Отключить VM Network
 systemctl restart networking
@@ -287,3 +289,88 @@ ls -lh $dest
 bash /etc/backup.sh
 
 tar -xvpzf /mnt/backup/backup.tgz -C / --numeric-owner
+
+
+<h1>Задание 7. Настройка SSH</h1>
+<h1>В зависимости от задания настраиваем HQ или BR</h1>
+---------------------------------------------------------------------------------------------------------------------------------
+<h1>Настройка HQ-SRV</h1>
+nano /etc/ssh/sshd_config
+#Port 22 заменить на Port 2222
+Раскоментить PerminRootLogin и дописать PerminRootLogin YES если нам необходим доступ только от локальных учётных записей
+systemctl restart ssh
+apt install iptables-persistent
+iptables -t nat -A PREROUTING -d 192.168.100.0/26 -p tcp -m tcp --dport 22 -j DNAT --to-destination 192.168.100.2:2222
+iptables-save>/etc/iptables/rules.v4
+
+<h1>Настройка HQ-R</h1>
+ssh-keygen -C HQ-R
+ssh-copy-id root@192.168.100.2
+ssh-copy-id admin@192.168.100.2
+ssh-copy-id network_admin@192.168.100.2
+<h1>Настройка HQ-SRV</h1>
+nano /etc/hosts.deny
+sshd: 30.30.30.2 (Адрес машины CLI)
+systemctl restart ssh
+---------------------------------------------------------------------------------------------------------------------------------
+<h1>Настройка BR-SRV</h1>
+nano /etc/ssh/sshd_config
+#Port 22 заменить на Port 2222
+Раскоментить PerminRootLogin и дописать PerminRootLogin YES если нам необходим доступ только от локальных учётных записей
+systemctl restart ssh
+apt install iptables-persistent
+iptables -t nat -A PREROUTING -d 10.100.70.0/28 -p tcp -m tcp --dport 22 -j DNAT --to-destination 192.168.100.2:2222
+iptables-save>/etc/iptables/rules.v4
+<h1>Настройка BR-R</h1>
+ssh-keygen -C HQ-R
+ssh-copy-id root@10.100.70.2
+ssh-copy-id admin@10.100.70.2
+ssh-copy-id network_admin@10.100.70.2
+<h1>Настройка BR-SRV</h1>
+nano /etc/hosts.deny
+sshd: 30.30.30.2 (Адрес машины CLI)
+systemctl restart ssh
+---------------------------------------------------------------------------------------------------------------------------------
+<h1>Модуль 2</h1>
+<h1>Задание 1. Настройка chrony</h1>
+<h1>Настройка HQ-R</h1>
+apt install chrony
+nano /etc/chrony/chrony.conf
+в конце пишется
+local stratum 5
+allow ALL
+systemctl restart chrony
+
+НА ВСЕХ МАШИНАХ кроме HQ-R "timedatectl set-timezone Europe/Moscow"
+
+apt install chrony (если не стоит)
+nano /etc/chrony/chrony.conf
+server 192.168.100.1
+
+Задание 2. Апач
+Настройка BR-SRV
+apt install apache2 libapache2-mod-php
+
+nano /etc/apache2/apache2.conf
+
+вписать в блок:
+<Directory /var/www/>
+-
+-
+-
+DirectoryIndex mesto.php  (эту строчку)
+<Directory /var/www/>
+
+для проверки сайта, зайти на CLI 172.16.100.2 (ip BR-SRV)
+
+Далле, mysql + пользователи BR-SRV
+
+Включить временно интернет
+apt install gnupg (если не поставили)
+wget https://dev.mysql.com/get/mysql-apt-config_0.8.29-1_all.deb
+dpkg -i ./mysql-apt-config_0.8.29-1_all.deb (нажимаем OK)
+apt update
+apt install mysql-server php-mysql (спросит пароль, пишем P@ssw0rd и первый вариант)
+apt install phpmyadmin (Apache2)(YES)(P@ssw0rd)
+Далее на CLI идем по адрессу 172.16.100.2/phpmyadmin (root/P@ssw0rd)
+Создаем там пользователей и группы, с присвоением к польоватлям.
