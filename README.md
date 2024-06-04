@@ -1,5 +1,8 @@
 <h1>Предварительная настройка</h1>
-
+apt install frr
+apt install isc-dhcp-server
+apt install iperf3
+apt install iptables-persistent
 <h1>Модуль 1</h1>
 <h1>Задание 1. Базовая настройка</h1>
 <h1>Настройка BR-R</h1>
@@ -159,6 +162,7 @@ apt install isc-dhcp-server
 
 nano /etc/default/isc-dhcp-server
 INTERFACESv4="ens224"
+INTERFACESv6="ens224"
 
 rm /etc/dhcp/dhcpd.conf, 
 nano /etc/dhcp/dhcpd.conf, 
@@ -221,6 +225,7 @@ network_admin   ALL=(ALL:ALL) ALL
 Отключить VM Network
 systemctl restart networking
 adduser admin
+network_admin 
 
 visudo
 #User privilege specification
