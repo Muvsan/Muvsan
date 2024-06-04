@@ -1,0 +1,203 @@
+закоментить яндекс мирор
+nano /etc/apt/sourse.list
+обновить пакеты apt install
+Возможно нужно будет перезапустить тачку или нетворк
+
+ISP - frr iperf3 chrony -y
+HQ-SRV - iptables iptables-persistent ssh chrony -y
+HQ-R - frr isc-dhcp-server iperf3 chrony -y
+BR-R - frr chrony -y
+BR-SRV - chorny apache2 libapache2-mod-php gnupg
+CLI - chrony -y
+
+systemctl restart networking
+
+Таблица IP адрессов, топология L3
+
+Для 2 задания, обоснование выбора OSPF:
+Исходя из всех
+поддерживаемых протоколов FRR (OSPF , EIGRP , IS-IS , BGP и тд.), OSPF
+подходит для построения среднеразмерных сетей, и при этом является открым
+стандартом протоколов динамической маршрутизации , в то время как EIGRP
+проприетарный протокол CISCO IOS, IS-IS и BGP используются для
+глобальной маршрутизации на уровне провайдеров.
+
+ОТКЛЮЧИТЬ ИНЕТ vmnetwork
+
+##############ВАЖНО##############
+nano /etc/frr/daemons (ospfd ospf6d - yes)
+nano /etc/sysctl.conf (Раскоментить ipv4/ipv6 forwarding)
+sysctl -p (применить выше)
+systemctl enable frr && restart frr (запуск FRR)
+
+настройка ospf
+	vtysh 
+		conf t
+			router ospf (указываем все сети к роутеру, с ipv4)
+				network 1.1.1.0/24 area 0
+				-
+				-
+				-
+			router ospf6 (указываем все сети к роутеру, с ipv6)
+				area 0.0.0.0 range 5004:aa:aa:1::0/64
+				-
+				-
+ip a (узнаем название физ. интерфейсов (ens 161/224/256 и тп)
+		int ens161 
+			ipv6 ospf6 area 0.0.0.0
+		int ensXXX 
+			ipv6 ospf6 area 0.0.0.0	
+		int ensXXX 
+			ipv6 ospf6 area 0.0.0.0
+	write
+##############ВАЖНО##############
+systemctl enable frr && restart frr (запуск FRR)
+systemctl restart networking (перезапуск инета)#
+########################
+#clear ip ospf process
+#clear ip ospf neighbor
+#show ipv6 ospf database и show ipv6 ospf neighbor
+#############################################################################
+HQ-R
+Настройка DHCP (автоматической выдачи IP-адресов):
+nano /etc/default/isc-dhcp-server, 
+после чего изменяем параметры: 
+INTERFACESv4="" на INTERFACESv4"ens224 (на пример)" 
+(к примеру INTERFACESv4"ens36")
+
+rm /etc/dhcp/dhcpd.conf, 
+nano /etc/dhcp/dhcpd.conf, 
+прописать следующее:
+
+subnet 192.168.100.0 netmask 255.255.255.192 {
+range 192.168.100.3 192.168.100.63;
+option routers 192.168.100.1;
+}
+
+#service isc-dhcp-server start/stop/restart (управление службой dhcp)
+#############################################################################
+Создать пользователей и выдача им рут прав
+	Учётная запись  Примечание
+	CLI - admin
+	HQ-R - admin, network_admin 
+	HQ-SRV - admin, network_admin 
+	BR-R - branch_admin, network_admin 
+	BR-SRV - branch_admin, network_admin 
+
+adduser admin, пароль P@ssw0rd
+visudo (файл конфигурации root прав)
+root ALL=(ALL:ALL) ALL
+admin ALL=(ALL:ALL) ALL (добавляем такую строчку)
+#############################################################################
+между HQ-R и ISP проверить пропускную способность
+Проверка с помощью iperf3 (Скриншоты!!!! и описание пропускного канала)
+iperf3 -c (ip адрес проверяемой машины) -i1 -t20 (сделать тест с 2 сторон)
+#############################################################################
+Создание бэкап скриптов на BR-R и HQ-R (Скриншоты!!!!)
+mkdir /mnt/backup
+touch /etc/backup
+nano /etc/backup.sh
+
+#1/bin/bash
+backup_files="/home /etc /root /boot /opt"
+dest="/mnt/backup"
+archive_file="backup.tgz"
+tar czf $dest/$archive_file $backup_files
+ls -lh $dest
+
+bash /etc/backup.sh
+tar -xvpzf /mnt/backup/backup.tgz -C / --numeric-owner
+#############################################################################
+Настройте подключение по SSH для удалённого
+конфигурирования устройства HQ-SRV по порту 2222
+HQ-SRV (если в задании HQ-SRV а не BR-SRV)
+
+nano /etc/ssh/sshd_config 
+1) меняем порт с 22 на 2222
+(Если нам необходим доступ только от локальных учётных записей , то шаг 2 необходимо пропустить)
+2) заранее пишем + раскоментим в строке PerminRootLogin YES !!!!!!!!!!!!!!!!!!!!!
+systemctl restart ssh
+ apt install iptables-persistent (перенаправление трафика)
+ iptables -t nat -A PREROUTING -d 192.168.100.0/26 -p tcp -m tcp --dport 22 -j DNAT --to-destination 192.168.100.2:2222
+ iptables-save>/etc/iptables/rules.v4
+ 
+(Далее на HQ-R или BR-R в зависимости от задания)
+HQ-R
+ssh-keygen -C HQ-R
+(два раза enter)
+
+ssh-copy-id root@192.168.100.2
+ssh-copy-id admin@192.168.100.2
+ssh-copy-id network_admin@192.168.100.2
+
+BR-R (если будет BR-R)
+ssh-keygen -C HQ-R
+(два раза enter)
+ssh-copy-id root@172.16.100.2
+ssh-copy-id branch@172.16.100.2
+ssh-copy-id network_admin@172.16.100.2
+
+(Далее на HQ-SRV или BR-SRV в зависимости от задания)
+nano /etc/hosts.deny
+sshd: 3.3.3.2 (Адрес машины CLI)
+systemctl restart ssh
+#############################################################################
+МОДУЛЬ 2 CHRONY время NTP
+-В качестве сервера должен выступать роутер HQ-R со стратумом 5
+-Используйте Loopback интерфейс на HQ-R, как источник серверавремени
+-Все остальные устройства и сервера должны синхронизировать свое время с роутером HQ-R
+-Все устройства и сервера настроены на московский часовой пояс (UTC+3)
+!!!!!Настройка везде одинаковая кроме настройки на сервере!!!!!
+#############
+Настройка сервера CHRONY
+nano /etc/chrony/chrony.conf
+в конце пишется
+local stratum 5
+allow ALL
+
+systemctl restart chrony
+
+НА ВСЕХ МАШИНАХ кроме HQ-R "timedatectl set-timezone Europe/Moscow"
+apt install chrony (если не стоит)
+nano /etc/chrony/chrony.conf
+server 192.168.100.1
+
+После этого перезагрузить машину на которой настроили chrony 
+Для проверки используйте команды chronyc tracking и chronyc sources
+
+#############################################################################
+МОДУЛЬ 2 Установка Web сервера LMS Apache на сервере BR-SRV
+
+BR-SRV Apt install apache2 libapache2-mod-php (если не поставил)
+
+nano /var/www/html/mesto.php (на BR-SRV делаем дэфолтную страницу APACHE)
+
+<?php
+$fontsize="200px";
+echo "<div style=\"text-align:center\">";
+print '<p style="font-size:' .htmlspecialchars($fontSize). '; ">5</p>';
+?>
+
+nano /etc/apache2/apache2.conf
+
+вписать в блок:
+<Directory /var/www/>
+-
+-
+-
+DirectoryIndex mesto.php  (эту строчку)
+<Directory /var/www/>
+
+для проверки сайта, зайти на CLI 172.16.100.2 (ip BR-SRV)
+
+Далле, mysql + пользователи BR-SRV
+
+Включить временно интернет
+apt install gnupg (если не поставили)
+wget https://dev.mysql.com/get/mysql-apt-config_0.8.29-1_all.deb
+dpkg -i ./mysql-apt-config_0.8.29-1_all.deb (нажимаем OK)
+apt update
+apt install mysql-server php-mysql (спросит пароль, пишем P@ssw0rd и первый вариант)
+apt install phpmyadmin (Apache2)(YES)(P@ssw0rd)
+Далее на CLI идем по адрессу 172.16.100.2/phpmyadmin (root/P@ssw0rd)
+Создаем там пользователей и группы, с присвоением к польоватлям.
