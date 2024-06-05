@@ -1,13 +1,20 @@
 <h1>Предварительная настройка</h1>
-ISP: apt install frr iperf3 chrony -y
-HQ-SRV: apt install iptables iptables-persistent ssh chrony -y
-HQ-R: apt install frr isc-dhcp-server iperf3 chrony -y
+закоментить яндекс мирор
+nano /etc/apt/sourse.list
 BR-R: apt install frr chrony -y
 BR-SRV: apt install chorny apache2 libapache2-mod-php gnupg
 CLI: apt install chrony -y
+HQ-R: apt install frr isc-dhcp-server iperf3 chrony -y
+HQ-SRV: apt install iptables iptables-persistent ssh chrony -y
+ISP: apt install frr iperf3 chrony -y
 <h1>Модуль 1</h1>
 <h1>Задание 1. Базовая настройка</h1>
 <h1>Настройка BR-R</h1>
+закоментить яндекс мирор
+nano /etc/apt/sourse.list
+
+apt install frr chrony -y
+
 hostnamectl set-hostname BR-R
 newgrp
 
@@ -20,6 +27,11 @@ BR-ISP:
 1001:aa:aa:20::2/64 - 1001:aa:aa:20::1
 
 <h1>Настройка BR-SRV</h1>
+закоментить яндекс мирор
+nano /etc/apt/sourse.list
+
+apt install chorny apache2 libapache2-mod-php gnupg
+
 hostnamectl set-hostname BR-SRV
 newgrp
 
@@ -28,6 +40,11 @@ BR:
 2002:aa:aa:10::2/124 - 2002:aa:aa:10::1
 
 <h1>Настройка CLI</h1>
+закоментить яндекс мирор
+nano /etc/apt/sourse.list
+
+apt install chrony -y
+
 hostnamectl set-hostname BR-R
 newgrp
 
@@ -36,6 +53,11 @@ ISP:
 1001:aa:aa:30::2/64 - 1001:aa:aa:30::1
 
 <h1>HQ-R</h1>
+закоментить яндекс мирор
+nano /etc/apt/sourse.list
+
+apt install frr isc-dhcp-server iperf3 chrony -y
+
 hostnamectl set-hostname HQ-R
 newgrp
 
@@ -48,6 +70,11 @@ HQ-ISP:
 1001:aa:aa:10::2/64 - 1001:aa:aa:10::1
 
 <h1>Настройка HQ-SRV</h1>
+закоментить яндекс мирор
+nano /etc/apt/sourse.list
+
+apt install iptables iptables-persistent ssh chrony -y
+
 hostnamectl set-hostname HQ-SRV
 newgrp
 
@@ -56,6 +83,11 @@ HQ:
 2002:aa:aa:192::2/122 - 2002:aa:aa:192::1
 
 <h1>Настройка ISP</h1>
+закоментить яндекс мирор
+nano /etc/apt/sourse.list
+
+apt install frr iperf3 chrony -y
+
 hostnamectl set-hostname ISP
 newgrp
 
